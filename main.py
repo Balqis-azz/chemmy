@@ -63,8 +63,6 @@ with tab2:
         - *Asam asetat*: CC(=O)O
         """)
 
----
-
 ## 🚀 LANGKAH 4 – Jalankan Aplikasinya
 
 ```bash
