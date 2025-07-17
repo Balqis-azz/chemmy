@@ -66,4 +66,5 @@ with tab2:
 ## 🚀 LANGKAH 4 – Jalankan Aplikasinya
 
 bash
+
 streamlit run main.py
