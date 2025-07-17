@@ -6,10 +6,10 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import rdMolDraw2D
 
-st.set_page_config(page_title="ChemExplorer 2.0", layout="wide")
+st.set_page_config(page_title="Chemmy", layout="wide")
 
 # Load data unsur
-with open("periodic_table.json") as file:
+with open("PeriodicTableJSON.json") as file:
     elements = json.load(file)["elements"]
 df = pd.DataFrame(elements)
 
