@@ -7,6 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import py3Dmol
 import stmol
+import ipywidgets
 
 st.set_page_config(page_title="Chemmy", layout="wide")
 
