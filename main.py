@@ -3,6 +3,10 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+from rdkit import Chem
+from rdkit.Chem import AllChem
+import py3Dmol
+import stmol
 
 st.set_page_config(page_title="Chemmy", layout="wide")
 
@@ -63,6 +67,33 @@ def analyze_smiles(smiles):
     analysis['aromatic'] = 'c' in smiles or (analysis['has_ring'] and analysis['has_double_bond'])
     return analysis
 
+# ===================== VISUALISASI 3D ===================== #
+def show_3d_molecule(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            st.warning("Tidak dapat menginterpretasikan SMILES ini")
+            return
+        
+        # Generate 3D coordinates
+        mol = Chem.AddHs(mol)
+        AllChem.EmbedMolecule(mol)
+        AllChem.MMFFOptimizeMolecule(mol)
+        
+        # Prepare for visualization
+        mb = Chem.MolToMolBlock(mol)
+        
+        # Display with py3Dmol
+        view = py3Dmol.view(width=400, height=400)
+        view.addModel(mb, 'mol')
+        view.setStyle({'stick': {}})
+        view.zoomTo()
+        view.spin()
+        stmol.showmol(view, height=400, width=400)
+        
+    except Exception as e:
+        st.error(f"Gagal menampilkan molekul 3D: {e}")
+
 # ===================== MOLEKUL ===================== #
 MOLECULES = {
     "CCO": {"name": "Ethanol", "formula": "C₂H₆O", "mw": 46.07, "description": "Alkohol yang umum digunakan"},
@@ -71,7 +102,7 @@ MOLECULES = {
     "O": {"name": "Water", "formula": "H₂O", "mw": 18.02, "description": "Air"},
     "C": {"name": "Methane", "formula": "CH₄", "mw": 16.04, "description": "Gas alam utama"},
     "CC(=O)OC1=CC=CC=C1C(=O)O": {"name": "Aspirin", "formula": "C₉H₈O₄", "mw": 180.16, "description": "Obat penghilang rasa sakit"},
-    "C(C1C(C(C(C(O1)O)O)O)O)O": {"name": "Glucose", "formula": "C₆H₁₂O₆", "mw": 180.16, "description": "Gula sederhana"},
+    "C(C1C(C(C(C(O1)O)O)O)O": {"name": "Glucose", "formula": "C₆H₁₂O₆", "mw": 180.16, "description": "Gula sederhana"},
     "CC(C)O": {"name": "Isopropanol", "formula": "C₃H₈O", "mw": 60.10, "description": "Alkohol isopropil"},
 }
 
@@ -91,11 +122,11 @@ with tab1:
         selected_symbol = st.selectbox("Pilih simbol unsur:", df["symbol"].sort_values())
         elemen = df[df["symbol"] == selected_symbol].iloc[0]
         st.subheader(f"🔬 {elemen['name']} ({elemen['symbol']})")
-        st.markdown(f"**Nomor Atom:** {elemen['number']}")
-        st.markdown(f"**Golongan:** {elemen.get('group', '-')}")
-        st.markdown(f"**Elektronegativitas:** {elemen.get('electronegativity', '-')}")
-        st.markdown(f"**Massa Atom:** {elemen.get('atomic_mass', '-')}")
-        st.markdown(f"**Konfigurasi Elektron:** `{elemen.get('electron_configuration', '-')}`")
+        st.markdown(f"*Nomor Atom:* {elemen['number']}")
+        st.markdown(f"*Golongan:* {elemen.get('group', '-')}")
+        st.markdown(f"*Elektronegativitas:* {elemen.get('electronegativity', '-')}")
+        st.markdown(f"*Massa Atom:* {elemen.get('atomic_mass', '-')}")
+        st.markdown(f"*Konfigurasi Elektron:* {elemen.get('electron_configuration', '-')}")
 
         if elemen.get('electronegativity') is not None:
             if elemen['electronegativity'] > 3.0:
@@ -115,8 +146,8 @@ with tab1:
         if not df_filtered.empty:
             max_en = df_filtered.loc[df_filtered['electronegativity'].idxmax()]
             min_en = df_filtered.loc[df_filtered['electronegativity'].idxmin()]
-            st.markdown(f"**Elektronegativitas Tertinggi:** {max_en['name']} ({max_en['electronegativity']})")
-            st.markdown(f"**Elektronegativitas Terendah:** {min_en['name']} ({min_en['electronegativity']})")
+            st.markdown(f"*Elektronegativitas Tertinggi:* {max_en['name']} ({max_en['electronegativity']})")
+            st.markdown(f"*Elektronegativitas Terendah:* {min_en['name']} ({min_en['electronegativity']})")
 
 # ---------------- TAB 2 ----------------
 with tab2:
@@ -131,7 +162,7 @@ with tab2:
             selected_idx = st.selectbox("Pilih molekul:", range(len(molecule_labels)), format_func=lambda x: molecule_labels[x])
             smiles = molecule_options[selected_idx]
             mol_info = MOLECULES[smiles]
-            st.info(f"**Deskripsi:** {mol_info['description']}")
+            st.info(f"*Deskripsi:* {mol_info['description']}")
         else:
             smiles = st.text_input("Masukkan SMILES:", value="CCO")
 
@@ -141,10 +172,10 @@ with tab2:
                 st.success("✅ Analisis berhasil!")
                 if smiles in MOLECULES:
                     mol_info = MOLECULES[smiles]
-                    st.markdown(f"**Nama:** {mol_info['name']}")
-                    st.markdown(f"**Formula:** {mol_info['formula']}")
-                    st.markdown(f"**Berat Molekul:** {mol_info['mw']} g/mol")
-                st.markdown(f"**SMILES:** `{smiles}`")
+                    st.markdown(f"*Nama:* {mol_info['name']}")
+                    st.markdown(f"*Formula:* {mol_info['formula']}")
+                    st.markdown(f"*Berat Molekul:* {mol_info['mw']} g/mol")
+                st.markdown(f"*SMILES:* {smiles}")
 
                 st.subheader("🔬 Komposisi Unsur")
                 for elem, count in analysis.items():
@@ -159,6 +190,10 @@ with tab2:
                 st.error("❌ Silakan masukkan SMILES yang valid")
 
     with col2:
+        if smiles:
+            st.subheader("🖼️ Visualisasi 3D Molekul")
+            show_3d_molecule(smiles)
+            
         st.subheader("📚 Panduan SMILES")
         with st.expander("🔤 Notasi Dasar"):
             st.markdown("""
@@ -186,5 +221,5 @@ with tab2:
 
 # Footer
 st.markdown("---")
-st.markdown("🧪 **ChemExplorer 2.0** - Eksplorasi Kimia Interaktif")
-st.markdown("*Dibuat dengan ❤️ menggunakan Streamlit*")
+st.markdown("🧪 *ChemExplorer 2.0* - Eksplorasi Kimia Interaktif")
+st.markdown("Dibuat dengan ❤️ menggunakan Streamlit")
