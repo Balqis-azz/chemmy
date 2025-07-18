@@ -1,79 +1,71 @@
-"""Primary application entrypoint."""
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import json
+from rdkit import Chem
+from rdkit.Chem import Draw
+from rdkit.Chem.Draw import rdMolDraw2D
 
-import locale
-import logging
-import os
-import sys
-import warnings
-from typing import List, Optional
+st.set_page_config(page_title="ChemExplorer 2.0", layout="wide")
 
-from pip._internal.cli.autocompletion import autocomplete
-from pip._internal.cli.main_parser import parse_command
-from pip._internal.commands import create_command
-from pip._internal.exceptions import PipError
-from pip._internal.utils import deprecation
+# Load data unsur
+with open("periodic_table.json") as file:
+    elements = json.load(file)["elements"]
+df = pd.DataFrame(elements)
 
-logger = logging.getLogger(__name__)
+st.title("🧪 ChemExplorer 2.0")
+tab1, tab2 = st.tabs(["🔬 Tabel Periodik", "🧬 Visualisasi Molekul"])
 
+# ========= TAB 1 ============
+with tab1:
+    st.header("📘 Info Unsur")
+    selected_symbol = st.sidebar.selectbox("Pilih simbol unsur", df["symbol"].sort_values())
+    elemen = df[df["symbol"] == selected_symbol].iloc[0]
 
-# Do not import and use main() directly! Using it directly is actively
-# discouraged by pip's maintainers. The name, location and behavior of
-# this function is subject to change, so calling it directly is not
-# portable across different pip versions.
+    st.subheader(f"{elemen['name']} ({elemen['symbol']})")
+    st.markdown(f"*Nomor Atom:* {elemen['number']}")
+    st.markdown(f"*Golongan:* {elemen.get('group', '-')}")
+    st.markdown(f"*Elektronegativitas:* {elemen.get('electronegativity', '-')}")
+    st.markdown(f"*Konfigurasi Elektron:* {elemen.get('electron_configuration', '-')}")
 
-# In addition, running pip in-process is unsupported and unsafe. This is
-# elaborated in detail at
-# https://pip.pypa.io/en/stable/user_guide/#using-pip-from-your-program.
-# That document also provides suggestions that should work for nearly
-# all users that are considering importing and using main() directly.
+    st.subheader("📈 Tren Elektronegativitas")
+    fig = px.line(df.sort_values("number"), x="number", y="electronegativity",
+                  labels={"number": "Nomor Atom", "electronegativity": "Elektronegativitas"},
+                  title="Elektronegativitas vs Nomor Atom")
+    st.plotly_chart(fig, use_container_width=True)
 
-# However, we know that certain users will still want to invoke pip
-# in-process. If you understand and accept the implications of using pip
-# in an unsupported manner, the best approach is to use runpy to avoid
-# depending on the exact location of this entry point.
+# ========= TAB 2 ==============
+with tab2:
+    st.header("🧬 Visualisasi Struktur Molekul")
 
-# The following example shows how to use runpy to invoke pip in that
-# case:
-#
-#     sys.argv = ["pip", your, args, here]
-#     runpy.run_module("pip", run_name="__main__")
-#
-# Note that this will exit the process after running, unlike a direct
-# call to main. As it is not safe to do any processing after calling
-# main, this should not be an issue in practice.
+    col1, col2 = st.columns([2, 3])
+    with col1:
+        input_type = st.radio("Input molekul via:", ["SMILES", "Nama (pakai SMILES manual)"])
+        if input_type == "SMILES":
+            smiles = st.text_input("Masukkan SMILES (contoh: C1=CC=CC=C1 untuk benzena):", value="CCO")
+        else:
+            smiles = st.text_input("Masukkan nama atau SMILES-nya (sementara gunakan SMILES):", value="CCO")
 
+        if st.button("Tampilkan Molekul"):
+            mol = Chem.MolFromSmiles(smiles)
+            if mol:
+                st.success("Struktur dikenali!")
+                st.image(Draw.MolToImage(mol, size=(300, 300)))
+            else:
+                st.error("Struktur tidak valid atau tidak dikenali.")
 
-def main(args: Optional[List[str]] = None) -> int:
-    if args is None:
-        args = sys.argv[1:]
+    with col2:
+        st.markdown("""
+        #### Contoh SMILES:
+        - *Benzena*: C1=CC=CC=C1
+        - *Ethanol*: CCO
+        - *Glukosa*: C(C1C(C(C(C(O1)O)O)O)O)O
+        - *Asam asetat*: CC(=O)O
+        """)
 
-    # Suppress the pkg_resources deprecation warning
-    # Note - we use a module of .*pkg_resources to cover
-    # the normal case (pip._vendor.pkg_resources) and the
-    # devendored case (a bare pkg_resources)
-    warnings.filterwarnings(
-        action="ignore", category=DeprecationWarning, module=".*pkg_resources"
-    )
+---
 
-    # Configure our deprecation warnings to be sent through loggers
-    deprecation.install_warning_logger()
+## 🚀 LANGKAH 4 – Jalankan Aplikasinya
 
-    autocomplete()
-
-    try:
-        cmd_name, cmd_args = parse_command(args)
-    except PipError as exc:
-        sys.stderr.write(f"ERROR: {exc}")
-        sys.stderr.write(os.linesep)
-        sys.exit(1)
-
-    # Needed for locale.getpreferredencoding(False) to work
-    # in pip._internal.utils.encoding.auto_decode
-    try:
-        locale.setlocale(locale.LC_ALL, "")
-    except locale.Error as e:
-        # setlocale can apparently crash if locale are uninitialized
-        logger.debug("Ignoring error %s when setting locale", e)
-    command = create_command(cmd_name, isolated=("--isolated" in cmd_args))
-
-    return command.main(cmd_args)
+```bash
+streamlit run main.py
