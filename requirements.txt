@@ -5,3 +5,5 @@ nump
 rdkit
 py3Dmol
 stmol
+ipywidgets
+ipython
